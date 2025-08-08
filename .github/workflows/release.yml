@@ -1,0 +1,75 @@
+name: Release & Discord Announcement
+
+on:
+  release:
+    types: [published, created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  announce-release:
+    name: Announce Release to Discord
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🎉 Send Release Announcement to Discord
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        VERSION="${{ github.event.release.tag_name || github.event.inputs.version }}"
+        BODY="${{ github.event.release.body || 'Manual release triggered via workflow dispatch' }}"
+        URL="${{ github.event.release.html_url || github.server_url }}/${{ github.repository }}/releases"
+        
+        curl -H "Content-Type: application/json" \
+          -X POST \
+          -d '{
+            "username": "Release Bot",
+            "avatar_url": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            "content": "@everyone 🎆 **New Release Available!**",
+            "embeds": [{
+              "title": "🎉 Release '"'"'${VERSION}'"'"' is now available!",
+              "description": "'"'"'${BODY}'"'"'",
+              "url": "'"'"'${URL}'"'"'",
+              "color": 5814783,
+              "author": {
+                "name": "${{ github.repository }}",
+                "icon_url": "https://github.com/${{ github.repository_owner }}.png"
+              },
+              "fields": [
+                {
+                  "name": "🎯 Version",
+                  "value": "`'"'"'${VERSION}'"'"'`",
+                  "inline": true
+                },
+                {
+                  "name": "👨‍💻 Author",
+                  "value": "${{ github.actor }}",
+                  "inline": true
+                },
+                {
+                  "name": "📦 Download",
+                  "value": "[Download Release]('"'"'${URL}'"'"')",
+                  "inline": false
+                }
+              ],
+              "footer": {
+                "text": "GitHub Releases",
+                "icon_url": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+              },
+              "timestamp": "${{ github.event.release.published_at || github.event.repository.updated_at }}"
+            }]
+          }' \
+          "$DISCORD_WEBHOOK"
+    
+    - name: 📋 Create Release Notes Summary
+      id: release_summary
+      run: |
+        echo "🚀 Release ${VERSION} has been published and announced to Discord!"
+        echo "release_version=${VERSION}" >> $GITHUB_OUTPUT
