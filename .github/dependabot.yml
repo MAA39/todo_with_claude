@@ -1,0 +1,50 @@
+# Dependabotの設定ファイル
+# 依存関係の自動更新を管理
+
+version: 2
+updates:
+  # npm依存関係の更新
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # マイナーバージョン以下の更新のみ自動化
+    versioning-strategy: increase-if-necessary
+    groups:
+      # 開発依存関係をグループ化
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "tsx"
+          - "typescript"
+        update-types:
+          - "minor"
+          - "patch"
+      # 本番依存関係
+      production:
+        patterns:
+          - "hono"
+          - "@hono/*"
+        update-types:
+          - "patch"
+
+  # GitHub Actions の更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "github-actions"
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
